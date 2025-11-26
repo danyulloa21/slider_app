@@ -1,5 +1,8 @@
+import 'dart:math';
+
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:slider_app/data/models/obstacle_model.dart';
+import '../../data/models/obstacle_model.dart';
 import '../../data/models/car_model.dart';
 import '../../data/models/scenario_model.dart';
 import '../../core/utils/game_size_config.dart';
@@ -24,8 +27,10 @@ class GameController extends GetxController {
   final tyres = 3.obs; // vidas
   final score = 0.obs;
 
-  // Obstáculos / pickups
+  /// Lista de obstáculos y recogibles (gasolina, llantas) que se dibujan en la pista
   final obstacles = <ObstacleInstance>[].obs;
+
+  final Random _rand = Random();
 
   @override
   void onInit() {
@@ -106,8 +111,56 @@ class GameController extends GetxController {
     }
   }
 
+  void generateObstaclesForSize(double width, double height) {
+    if (obstacles.isNotEmpty) return;
+
+    final lanes = lanesCount.value;
+    if (lanes <= 0) return;
+
+    final laneWidthLocal = laneWidth.value;
+    final padding = horizontalPadding;
+    final carW = carWidth;
+    final carH = carHeight;
+
+    for (int lane = 0; lane < lanes; lane++) {
+      final laneCenterX = padding + laneWidthLocal * lane + laneWidthLocal / 2;
+
+      // Obstáculo sólido (2:1) en la parte media
+      obstacles.add(
+        ObstacleInstance(
+          type: ObstacleType.obstacle2x1,
+          x: laneCenterX - (2 * carW) / 2,
+          y: height * (0.25 + _rand.nextDouble() * 0.15),
+          size: Size(2 * carW, carH),
+          speed: height * 0.15,
+        ),
+      );
+
+      // Gasolina (1:1) un poco más adelante
+      obstacles.add(
+        ObstacleInstance(
+          type: ObstacleType.fuelPickup,
+          x: laneCenterX - carW / 2,
+          y: height * (0.50 + _rand.nextDouble() * 0.15),
+          size: Size(carW, carH),
+          speed: height * 0.12,
+        ),
+      );
+
+      // Llantas / pickup pequeño (1:0.5) más cerca del final
+      obstacles.add(
+        ObstacleInstance(
+          type: ObstacleType.tyrePickup,
+          x: laneCenterX - carW / 2,
+          y: height * (0.75 + _rand.nextDouble() * 0.10),
+          size: Size(carW, carH * 0.5),
+          speed: height * 0.10,
+        ),
+      );
+    }
+  }
+
   // TODO: aquí luego agregas lógica de:
-  // - spawn de obstáculos
   // - movimiento
   // - colisiones
   // - consumo de gasolina

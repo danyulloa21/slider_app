@@ -19,6 +19,10 @@ class ObstacleInstance {
   /// Tamaño actual del sprite
   final Size size;
 
+  /// Atajos para ancho y alto, derivados de [size]
+  double get width => size.width;
+  double get height => size.height;
+
   /// Velocidad vertical (px por tick)
   double speed;
 

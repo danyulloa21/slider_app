@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/widgets/app_layout.dart';
+import '../../data/models/obstacle_model.dart';
 import 'game_controller.dart';
 
 class GameView extends StatefulWidget {
@@ -40,6 +41,9 @@ class _GameViewState extends State<GameView> {
               _initCarPosition(totalWidth, totalHeight, isVertical);
             }
 
+            // Generamos obstáculos estáticos solo una vez para este tamaño
+            controller.generateObstaclesForSize(totalWidth, totalHeight);
+
             return GestureDetector(
               // Arrastre libre: horizontal en modo vertical, vertical en modo horizontal
               onPanUpdate: (details) =>
@@ -54,22 +58,14 @@ class _GameViewState extends State<GameView> {
                     child: _buildLanes(totalWidth, totalHeight, isVertical),
                   ),
 
-                  // TODO: aquí luego se pueden dibujar obstáculos / pickups
-                  // ..._buildObstaclesLayer(),
+                  // Obstáculos y pickups (gasolina, llantas)
+                  Positioned.fill(child: _buildObstaclesLayer()),
 
                   // Auto
                   _buildCar(isVertical),
 
                   // HUD
                   Positioned(top: 0, left: 0, right: 0, child: _buildHud()),
-
-                  // Controles de movimiento (opcional, además del drag)
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: _buildControls(isVertical),
-                  ),
                 ],
               ),
             );
@@ -214,6 +210,66 @@ class _GameViewState extends State<GameView> {
     );
   }
 
+  Widget _buildObstaclesLayer() {
+    return Obx(
+      () => Stack(
+        children: controller.obstacles.map((o) {
+          Color baseColor;
+          IconData? icon;
+
+          switch (o.type) {
+            case ObstacleType.obstacle2x1:
+            case ObstacleType.obstacle1x1:
+              baseColor = Colors.brown.shade700;
+              icon = Icons.warning_rounded;
+              break;
+            case ObstacleType.fuelPickup:
+            case ObstacleType.recarga1x1:
+            case ObstacleType.recarga1x05:
+              baseColor = Colors.orangeAccent;
+              icon = Icons.local_gas_station;
+              break;
+            case ObstacleType.tyrePickup:
+              baseColor = Colors.blueGrey;
+              icon = Icons.build; // representa cambio de llantas
+              break;
+          }
+
+          return Positioned(
+            left: o.x,
+            top: o.y,
+            width: o.width,
+            height: o.height,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    baseColor.withOpacity(0.95),
+                    baseColor.withOpacity(0.7),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Colors.black.withOpacity(0.4),
+                  width: 1.2,
+                ),
+              ),
+              child: Center(
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                  size: (o.height * 0.6).clamp(12.0, 24.0),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildCar(bool isVertical) {
     final carPath = controller.car?.assetPath ?? 'assets/cars/orange_car.png';
 
@@ -300,59 +356,6 @@ class _GameViewState extends State<GameView> {
         ],
       ),
     );
-  }
-
-  Widget _buildControls(bool isVertical) {
-    // Controles secundarios, además del arrastre
-    if (isVertical) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ElevatedButton.icon(
-            onPressed: () {
-              setState(() {
-                _carX -= controller.laneWidth.value / 2;
-              });
-            },
-            icon: const Icon(Icons.arrow_left),
-            label: const Text('Izquierda'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              setState(() {
-                _carX += controller.laneWidth.value / 2;
-              });
-            },
-            icon: const Icon(Icons.arrow_right),
-            label: const Text('Derecha'),
-          ),
-        ],
-      );
-    } else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          ElevatedButton.icon(
-            onPressed: () {
-              setState(() {
-                _carY -= controller.carHeight;
-              });
-            },
-            icon: const Icon(Icons.arrow_upward),
-            label: const Text('Arriba'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              setState(() {
-                _carY += controller.carHeight;
-              });
-            },
-            icon: const Icon(Icons.arrow_downward),
-            label: const Text('Abajo'),
-          ),
-        ],
-      );
-    }
   }
 }
 
