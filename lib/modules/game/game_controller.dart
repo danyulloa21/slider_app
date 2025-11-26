@@ -111,19 +111,28 @@ class GameController extends GetxController {
 
   /// Rectángulo del coche en coordenadas de la pista, usado para colisiones.
   Rect get carRect {
+    // Escalamos el rectángulo de colisión para que sea más "justo"
+    const hitboxScale = 0.7;
+    final hitWidth = carWidth * hitboxScale;
+    final hitHeight = carHeight * hitboxScale;
+
     if (isVertical.value) {
-      return Rect.fromLTWH(
-        carX.value - carWidth / 2,
-        carY.value,
-        carWidth,
-        carHeight,
+      // En vertical, el coche se dibuja con top = _carY y height = carHeight
+      final centerX = carX.value;
+      final centerY = carY.value + carHeight / 2;
+      return Rect.fromCenter(
+        center: Offset(centerX, centerY),
+        width: hitWidth,
+        height: hitHeight,
       );
     } else {
-      return Rect.fromLTWH(
-        carX.value - carWidth / 2,
-        carY.value - carHeight / 2,
-        carWidth,
-        carHeight,
+      // En horizontal, el coche se dibuja centrado en (_carX, _carY)
+      final centerX = carX.value;
+      final centerY = carY.value;
+      return Rect.fromCenter(
+        center: Offset(centerX, centerY),
+        width: hitWidth,
+        height: hitHeight,
       );
     }
   }
@@ -157,13 +166,17 @@ class GameController extends GetxController {
     for (int lane = 0; lane < lanes; lane++) {
       final laneCenterX = padding + laneWidthLocal * lane + laneWidthLocal / 2;
 
-      // 1) Obstáculo sólido (2:1) aparece desde arriba
+      // 1) Obstáculo sólido (2:1) aparece desde arriba, ajustado al ancho del carril
+      final obstacleW =
+          laneWidthLocal * 0.9; // un poco más angosto que el carril
+      final obstacleH = obstacleW / 2; // relación ~2:1
+
       obstacles.add(
         ObstacleInstance(
           type: ObstacleType.obstacle2x1,
-          x: laneCenterX - (2 * carW) / 2,
+          x: laneCenterX - obstacleW / 2,
           y: -height * (0.2 + _rand.nextDouble() * 0.2), // entra por arriba
-          size: Size(2 * carW, carH),
+          size: Size(obstacleW, obstacleH),
           speed: height * 0.25, // un poco más rápido
         ),
       );
