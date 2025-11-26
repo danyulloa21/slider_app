@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../core/widgets/app_layout.dart';
@@ -18,6 +19,25 @@ class _GameViewState extends State<GameView> {
   double _carY = 0;
   bool _carPositionInitialized = false;
 
+  Size? _playAreaSize;
+  Timer? _gameLoopTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Loop simple de ~60 FPS
+    _gameLoopTimer = Timer.periodic(const Duration(milliseconds: 16), (_) {
+      if (!mounted) return;
+      controller.updateGame(16 / 1000);
+    });
+  }
+
+  @override
+  void dispose() {
+    _gameLoopTimer?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return AppLayout(
@@ -35,10 +55,12 @@ class _GameViewState extends State<GameView> {
           builder: (context, constraints) {
             final totalWidth = constraints.maxWidth;
             final totalHeight = constraints.maxHeight;
+            _playAreaSize = Size(totalWidth, totalHeight);
             final isVertical = controller.isVertical.value;
 
             if (!_carPositionInitialized) {
               _initCarPosition(totalWidth, totalHeight, isVertical);
+              controller.updateCarPosition(_carX, _carY);
             }
 
             // Generamos obstáculos estáticos solo una vez para este tamaño
@@ -114,6 +136,7 @@ class _GameViewState extends State<GameView> {
         final maxY = totalHeight - halfCarH - GameController.horizontalPadding;
         _carY = _carY.clamp(minY, maxY);
       }
+      controller.updateCarPosition(_carX, _carY);
     });
   }
 
@@ -260,7 +283,7 @@ class _GameViewState extends State<GameView> {
                 child: Icon(
                   icon,
                   color: Colors.white,
-                  size: (o.height * 0.6).clamp(12.0, 24.0),
+                  size: (o.height * 0.45).clamp(10.0, 20.0),
                 ),
               ),
             ),
