@@ -43,6 +43,9 @@ class GameController extends GetxController {
   final Random _rand = Random();
   Size? _playAreaSize;
 
+  /// Indica si el jugador ya perdió (por ejemplo, sin combustible)
+  final isGameOver = false.obs;
+
   @override
   void onInit() {
     super.onInit();
@@ -151,8 +154,10 @@ class GameController extends GetxController {
   }
 
   void generateObstaclesForSize(double width, double height) {
+    // Guardamos el área de juego para usarla en el loop
     _playAreaSize = Size(width, height);
 
+    // Solo generamos una nueva "oleada" si ya no hay obstáculos activos
     if (obstacles.isNotEmpty) return;
 
     final lanes = lanesCount.value;
@@ -160,52 +165,85 @@ class GameController extends GetxController {
 
     final laneWidthLocal = laneWidth.value;
     final padding = horizontalPadding;
-    final carW = carWidth;
-    final carH = carHeight;
 
-    for (int lane = 0; lane < lanes; lane++) {
+    // Cantidad base de obstáculos por oleada (escala con número de carriles)
+    final int baseCount = max(3, lanes * 2);
+
+    // Posibles tipos de obstáculos / pickups
+    final types = <ObstacleType>[
+      ObstacleType.obstacle2x1,
+      ObstacleType.obstacle1x1,
+      ObstacleType.fuelPickup,
+      ObstacleType.recarga1x1,
+      ObstacleType.recarga1x05,
+      ObstacleType.tyrePickup,
+    ];
+
+    for (int i = 0; i < baseCount; i++) {
+      // Elegimos carril aleatorio
+      final lane = _rand.nextInt(lanes);
       final laneCenterX = padding + laneWidthLocal * lane + laneWidthLocal / 2;
 
-      // 1) Obstáculo sólido (2:1) aparece desde arriba, ajustado al ancho del carril
-      final obstacleW =
-          laneWidthLocal * 0.9; // un poco más angosto que el carril
-      final obstacleH = obstacleW / 2; // relación ~2:1
+      // Elegimos tipo aleatorio (con todos mezclados)
+      final type = types[_rand.nextInt(types.length)];
+
+      // Definimos tamaño según tipo, respetando proporciones del enunciado
+      double w;
+      double h;
+      double speedFactor;
+
+      switch (type) {
+        case ObstacleType.obstacle2x1:
+          // Obstáculo 2:1 ajustado al carril
+          w = laneWidthLocal * 0.9;
+          h = w / 2;
+          speedFactor = 0.26;
+          break;
+        case ObstacleType.obstacle1x1:
+          // Obstáculo cuadrado dentro del carril
+          w = laneWidthLocal * 0.7;
+          h = w;
+          speedFactor = 0.24;
+          break;
+        case ObstacleType.fuelPickup:
+        case ObstacleType.recarga1x1:
+          // Pickup cuadrado más pequeño
+          w = laneWidthLocal * 0.5;
+          h = w;
+          speedFactor = 0.22;
+          break;
+        case ObstacleType.recarga1x05:
+        case ObstacleType.tyrePickup:
+          // 1:0.5
+          w = laneWidthLocal * 0.5;
+          h = w * 0.5;
+          speedFactor = 0.2;
+          break;
+      }
+
+      // Distribuimos Y en "bandas" para que no se apilen todos juntos
+      final band = _rand.nextDouble();
+      double y;
+      if (band < 0.33) {
+        // Aparece por arriba de la pantalla (entra hacia el jugador)
+        y = -height * (0.3 + _rand.nextDouble() * 0.7);
+      } else if (band < 0.66) {
+        // Cerca del área central
+        y = height * (0.1 + _rand.nextDouble() * 0.8);
+      } else {
+        // Más alejado hacia abajo (para sensación de profundidad / avance)
+        y = height * (1.0 + _rand.nextDouble() * 0.8);
+      }
 
       obstacles.add(
         ObstacleInstance(
-          type: ObstacleType.obstacle2x1,
-          x: laneCenterX - obstacleW / 2,
-          y: -height * (0.2 + _rand.nextDouble() * 0.2), // entra por arriba
-          size: Size(obstacleW, obstacleH),
-          speed: height * 0.25, // un poco más rápido
+          type: type,
+          x: laneCenterX - w / 2,
+          y: y,
+          size: Size(w, h),
+          speed: height * speedFactor,
         ),
       );
-
-      // 2) Gasolina (1:1) con probabilidad 70%
-      if (_rand.nextDouble() < 0.7) {
-        obstacles.add(
-          ObstacleInstance(
-            type: ObstacleType.fuelPickup,
-            x: laneCenterX - carW / 2,
-            y: height * (0.4 + _rand.nextDouble() * 0.4),
-            size: Size(carW, carH),
-            speed: height * 0.22,
-          ),
-        );
-      }
-
-      // 3) Llantas (1:0.5) con probabilidad 50%
-      if (_rand.nextDouble() < 0.5) {
-        obstacles.add(
-          ObstacleInstance(
-            type: ObstacleType.tyrePickup,
-            x: laneCenterX - carW / 2,
-            y: height * (0.9 + _rand.nextDouble() * 0.6),
-            size: Size(carW, carH * 0.5),
-            speed: height * 0.2,
-          ),
-        );
-      }
     }
   }
 

@@ -19,7 +19,7 @@ class _GameViewState extends State<GameView> {
   double _carY = 0;
   bool _carPositionInitialized = false;
 
-  Size? _playAreaSize;
+  // Size? _playAreaSize;
   Timer? _gameLoopTimer;
 
   @override
@@ -55,7 +55,7 @@ class _GameViewState extends State<GameView> {
           builder: (context, constraints) {
             final totalWidth = constraints.maxWidth;
             final totalHeight = constraints.maxHeight;
-            _playAreaSize = Size(totalWidth, totalHeight);
+            // _playAreaSize = Size(totalWidth, totalHeight);
             final isVertical = controller.isVertical.value;
 
             if (!_carPositionInitialized) {
