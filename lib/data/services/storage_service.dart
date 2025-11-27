@@ -169,7 +169,9 @@ class SupabaseService {
         'updated_at': DateTime.now().toIso8601String(),
       };
 
-      await _client.from('players').insert(newPlayer);
+      await _client
+          .from('players')
+          .upsert(newPlayer, onConflict: 'player_name');
     } on PostgrestException catch (error) {
       await _logError(
         scope: 'insertPlayer',
