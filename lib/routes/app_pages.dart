@@ -1,4 +1,6 @@
 import 'package:get/get.dart';
+import 'package:slider_app/modules/scoreboard/scoreboard_binding.dart';
+import 'package:slider_app/modules/scoreboard/scoreboard_view.dart';
 
 import '../modules/splash/splash_binding.dart';
 import '../modules/splash/splash_view.dart';
@@ -28,6 +30,10 @@ class AppPages {
       binding: GameBinding(),
       transition: Transition.noTransition,
     ),
-    // scoreboard luego
+    GetPage(
+      name: AppRoutes.scoreboard,
+      page: () => const ScoreboardView(),
+      binding: ScoreboardBinding(),
+    ),
   ];
 }
