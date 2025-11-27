@@ -26,6 +26,7 @@ class AppPages {
       name: AppRoutes.game,
       page: () => const GameView(),
       binding: GameBinding(),
+      transition: Transition.noTransition,
     ),
     // scoreboard luego
   ];
