@@ -50,11 +50,6 @@ class GameController extends GetxController {
   void onInit() {
     super.onInit();
     _readArguments();
-  }
-
-  @override
-  void onReady() {
-    super.onReady();
     _configureLayout();
   }
 
@@ -250,6 +245,9 @@ class GameController extends GetxController {
   /// Actualiza la lógica del juego (movimiento de obstáculos, colisiones, etc.).
   /// [dt] es el delta de tiempo en segundos desde el último frame.
   void updateGame(double dt) {
+    // Si el juego ya terminó, no seguimos actualizando nada
+    if (isGameOver.value) return;
+
     final playSize = _playAreaSize;
     if (playSize == null) return;
     if (obstacles.isEmpty) return;
@@ -266,6 +264,12 @@ class GameController extends GetxController {
     // Consumo de gasolina constante
     fuel.value = max(fuel.value - 3 * dt, 0);
 
+    // Si se quedó sin combustible, marcamos fin de juego y detenemos la lógica
+    if (fuel.value <= 0) {
+      isGameOver.value = true;
+      return;
+    }
+
     // Colisiones con el coche
     final carR = carRect;
     for (final o in obstacles) {
@@ -273,6 +277,12 @@ class GameController extends GetxController {
       if (o.rect.overlaps(carR)) {
         _handleCollision(o);
       }
+    }
+
+    // Si después de una colisión también nos quedamos sin combustible,
+    // volvemos a marcar game over
+    if (fuel.value <= 0) {
+      isGameOver.value = true;
     }
 
     // Eliminamos obstáculos fuera de pantalla o ya consumidos

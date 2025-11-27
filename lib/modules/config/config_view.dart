@@ -8,8 +8,6 @@ class ConfigView extends GetView<ConfigController> {
 
   @override
   Widget build(BuildContext context) {
-    print('ConfigView build con controller hashCode: ${controller.hashCode}');
-
     return AppLayout(
       title: 'Configuración del juego',
       showBack: false,

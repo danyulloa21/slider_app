@@ -51,11 +51,13 @@ class _GameViewState extends State<GameView> {
           return const Center(child: CircularProgressIndicator());
         }
 
+        // Leemos también el estado de game over dentro del mismo Obx
+        final isGameOver = controller.isGameOver.value;
+
         return LayoutBuilder(
           builder: (context, constraints) {
             final totalWidth = constraints.maxWidth;
             final totalHeight = constraints.maxHeight;
-            // _playAreaSize = Size(totalWidth, totalHeight);
             final isVertical = controller.isVertical.value;
 
             if (!_carPositionInitialized) {
@@ -88,6 +90,57 @@ class _GameViewState extends State<GameView> {
 
                   // HUD
                   Positioned(top: 0, left: 0, right: 0, child: _buildHud()),
+
+                  // Overlay de Game Over cuando no hay combustible
+                  if (isGameOver)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black.withOpacity(0.6),
+                        child: Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Text(
+                                '¡Juego terminado!',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Te quedaste sin combustible.',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Puntaje: ${controller.score.value}',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 18,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton(
+                                onPressed: () {
+                                  // Aquí podrías navegar al scoreboard o reiniciar el juego
+                                  if (Navigator.canPop(context)) {
+                                    Get.back();
+                                  } else {
+                                    Get.offAllNamed('/config');
+                                  }
+                                },
+                                child: const Text('Salir'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             );
@@ -120,6 +173,9 @@ class _GameViewState extends State<GameView> {
     double totalHeight,
     bool isVertical,
   ) {
+    // Si el juego ya terminó, no permitimos mover el coche
+    if (controller.isGameOver.value) return;
+
     setState(() {
       if (isVertical) {
         // Mover coche horizontalmente
@@ -324,55 +380,191 @@ class _GameViewState extends State<GameView> {
 
   Widget _buildHud() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.45),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              'Jugador: ${controller.username}',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+        color: Colors.black.withOpacity(0.55),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Fila superior: jugador y orientación / escenario
           Row(
-            mainAxisSize: MainAxisSize.min,
+            children: [
+              Expanded(
+                child: Text(
+                  controller.username.isNotEmpty
+                      ? 'Jugador: ${controller.username}'
+                      : 'Jugador invitado',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.terrain, color: Colors.white70, size: 16),
+                  const SizedBox(width: 4),
+                  Text(
+                    controller.scenario?.name.toUpperCase() ?? 'SIN ESCENARIO',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Barra de combustible
+          Row(
             children: [
               const Icon(
                 Icons.local_gas_station,
-                color: Colors.white,
+                color: Colors.orangeAccent,
                 size: 18,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: 6),
+              const Text(
+                'Combustible',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Obx(() {
+                  final fuelPercent =
+                      controller.fuel.value.clamp(0, 100) / 100.0;
+                  Color barColor;
+                  if (fuelPercent > 0.6) {
+                    barColor = Colors.greenAccent;
+                  } else if (fuelPercent > 0.3) {
+                    barColor = Colors.yellowAccent;
+                  } else {
+                    barColor = Colors.redAccent;
+                  }
+
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: fuelPercent,
+                      minHeight: 8,
+                      backgroundColor: Colors.white.withOpacity(0.15),
+                      valueColor: AlwaysStoppedAnimation<Color>(barColor),
+                    ),
+                  );
+                }),
+              ),
+              const SizedBox(width: 8),
               Obx(
                 () => Text(
                   '${controller.fuel.value.toInt()}%',
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white, fontSize: 11),
                 ),
               ),
-              const SizedBox(width: 12),
-              const Icon(Icons.circle, color: Colors.white, size: 14),
-              const SizedBox(width: 4),
-              Obx(
-                () => Text(
-                  '${controller.tyres.value}',
-                  style: const TextStyle(color: Colors.white),
-                ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          // Fila inferior: llantas y puntaje
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(
+                    Icons.circle,
+                    color: Colors.lightBlueAccent,
+                    size: 14,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Llantas',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  const SizedBox(width: 6),
+                  Obx(
+                    () => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.2),
+                          width: 0.8,
+                        ),
+                      ),
+                      child: Text(
+                        '${controller.tyres.value}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              const Icon(Icons.star, color: Colors.amber, size: 18),
-              const SizedBox(width: 4),
-              Obx(
-                () => Text(
-                  '${controller.score.value}',
-                  style: const TextStyle(color: Colors.white),
-                ),
+              Row(
+                children: [
+                  const Icon(Icons.star, color: Colors.amber, size: 18),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Puntaje',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  const SizedBox(width: 6),
+                  Obx(
+                    () => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Colors.amber, Colors.deepOrangeAccent],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${controller.score.value}',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
