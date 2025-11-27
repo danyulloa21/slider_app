@@ -89,7 +89,7 @@ class SplashView extends GetView<SplashController> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Powered by Flutter & GetX',
+                    'Powered by Dany Ulloa',
                     style: TextStyle(
                       color: Colors.white.withAlpha((0.4 * 255).toInt()),
                       fontSize: 12,
