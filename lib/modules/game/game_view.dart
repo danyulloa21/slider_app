@@ -95,7 +95,7 @@ class _GameViewState extends State<GameView> {
                   if (isGameOver)
                     Positioned.fill(
                       child: Container(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha: 0.7),
                         child: Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
@@ -323,15 +323,15 @@ class _GameViewState extends State<GameView> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    baseColor.withOpacity(0.95),
-                    baseColor.withOpacity(0.7),
+                    baseColor.withValues(alpha: 0.9),
+                    baseColor.withValues(alpha: 0.7),
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: Colors.black.withOpacity(0.4),
+                  color: Colors.black.withValues(alpha: 0.6),
                   width: 1.2,
                 ),
               ),
@@ -383,12 +383,15 @@ class _GameViewState extends State<GameView> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.55),
+        color: Colors.black.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.15), width: 1),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.15),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -470,7 +473,7 @@ class _GameViewState extends State<GameView> {
                     child: LinearProgressIndicator(
                       value: fuelPercent,
                       minHeight: 8,
-                      backgroundColor: Colors.white.withOpacity(0.15),
+                      backgroundColor: Colors.white.withValues(alpha: 0.15),
                       valueColor: AlwaysStoppedAnimation<Color>(barColor),
                     ),
                   );
@@ -512,10 +515,10 @@ class _GameViewState extends State<GameView> {
                         vertical: 3,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
+                        color: Colors.white.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           width: 0.8,
                         ),
                       ),
@@ -591,7 +594,7 @@ class _LanePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.5)
+      ..color = Colors.white.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 

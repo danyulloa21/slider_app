@@ -13,7 +13,6 @@ class CarModel {
 
   @override
   String toString() {
-    // TODO: implement toString
     super.toString();
     return 'CarModel(id: $id, name: $name), assetPath: $assetPath), baseWidthRatio: $baseWidthRatio';
   }

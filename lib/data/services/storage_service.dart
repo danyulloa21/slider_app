@@ -1,6 +1,8 @@
-import 'package:flutter/foundation.dart';
+import 'dart:ui';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:get/get.dart';
 
 /// Servicio centralizado para gestionar todas las interacciones con Supabase.
 ///
@@ -11,6 +13,43 @@ class SupabaseService {
   /// Constructor. Recibe el cliente de Supabase (por defecto usa Supabase.instance.client).
   SupabaseService({SupabaseClient? client})
     : _client = client ?? Supabase.instance.client;
+
+  /// Registra errores en la tabla 'error_logs' para diagnóstico en producción.
+  ///
+  /// Espera que exista una tabla con columnas:
+  /// - scope (text)
+  /// - message (text)
+  /// - user_id (uuid, nullable)
+  /// - created_at (timestamptz)
+  Future<void> _logError({
+    required String scope,
+    required String message,
+    String? userId,
+  }) async {
+    try {
+      await _client.from('error_logs').insert({
+        'scope': scope,
+        'message': message,
+        'user_id': userId ?? _client.auth.currentUser?.id,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {
+      // No hacemos nada aquí para evitar loops de error.
+    }
+  }
+
+  void _showErrorSnackbar(String title, String message) {
+    if (Get.isSnackbarOpen == true) return;
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: const Color(0xFFB00020),
+      colorText: const Color(0xFFFFFFFF),
+      borderRadius: 12,
+      duration: const Duration(seconds: 3),
+    );
+  }
 
   /// Obtiene el cliente de Supabase (útil si necesitas acceso directo en casos especiales).
   SupabaseClient get client => _client;
@@ -39,14 +78,28 @@ class SupabaseService {
       );
 
       if (response.session == null) {
-        debugPrint('❌ Error signing in: No session returned');
+        await _logError(
+          scope: 'signIn',
+          message: 'No session returned for email $email',
+        );
+        _showErrorSnackbar(
+          'Error de autenticación',
+          'No se pudo iniciar sesión. Intenta nuevamente más tarde.',
+        );
         return false;
       } else {
-        debugPrint('✅ User signed in: ${response.user?.email}');
+        // Podrías loggear un evento de login exitoso si lo deseas.
         return true;
       }
     } catch (error) {
-      debugPrint('❌ Error inesperado al hacer sign in: $error');
+      await _logError(
+        scope: 'signIn',
+        message: 'Excepción al hacer signIn: $error',
+      );
+      _showErrorSnackbar(
+        'Error de autenticación',
+        'Ocurrió un problema al conectar con el servidor.',
+      );
       return false;
     }
   }
@@ -55,9 +108,15 @@ class SupabaseService {
   Future<void> signOut() async {
     try {
       await _client.auth.signOut();
-      debugPrint('✅ Usuario deslogueado.');
     } catch (error) {
-      debugPrint('❌ Error al hacer sign out: $error');
+      await _logError(
+        scope: 'signOut',
+        message: 'Error al hacer signOut: $error',
+      );
+      _showErrorSnackbar(
+        'Error al cerrar sesión',
+        'No se pudo cerrar la sesión correctamente.',
+      );
     }
   }
 
@@ -81,19 +140,23 @@ class SupabaseService {
     final session = _client.auth.currentSession;
     final user = _client.auth.currentUser;
 
-    debugPrint('session: $session');
-    debugPrint('user id: ${user?.id}');
-
     if (session == null || user == null) {
       // Intenta autenticarse si no hay sesión usando credenciales del .env
-      debugPrint('⚠️ No hay sesión activa. Intentando autenticar...');
       final email = dotenv.env['AUTH_EMAIL'];
       final password = dotenv.env['AUTH_PASSWORD'];
 
       if (email != null && password != null) {
         await signIn(email: email, password: password);
       } else {
-        debugPrint('❌ No se encontraron credenciales en .env');
+        await _logError(
+          scope: 'insertPlayer',
+          message:
+              'No se encontraron credenciales en .env para insertar jugador "$playerName".',
+        );
+        _showErrorSnackbar(
+          'Error al guardar puntaje',
+          'No se pudo autenticar para guardar tu puntaje.',
+        );
         return;
       }
     }
@@ -102,17 +165,32 @@ class SupabaseService {
       final newPlayer = {
         'player_name': playerName,
         'points': points,
-        'user_id': userId ?? '3843a525-e9d5-414c-9994-dbb81aa4f633',
+        'user_id': userId ?? _client.auth.currentUser?.id,
         'updated_at': DateTime.now().toIso8601String(),
       };
 
       await _client.from('players').insert(newPlayer);
-
-      debugPrint('✅ Jugador insertado exitosamente: $playerName');
     } on PostgrestException catch (error) {
-      debugPrint('❌ Error al insertar jugador: ${error.message}');
+      await _logError(
+        scope: 'insertPlayer',
+        message:
+            'PostgrestException al insertar jugador "$playerName": ${error.message}',
+        userId: userId ?? _client.auth.currentUser?.id,
+      );
+      _showErrorSnackbar(
+        'Error al guardar puntaje',
+        'No se pudo guardar tu puntaje en el servidor.',
+      );
     } catch (error) {
-      debugPrint('❌ Error inesperado al insertar: $error');
+      await _logError(
+        scope: 'insertPlayer',
+        message: 'Error inesperado al insertar jugador "$playerName": $error',
+        userId: userId ?? _client.auth.currentUser?.id,
+      );
+      _showErrorSnackbar(
+        'Error al guardar puntaje',
+        'Ocurrió un problema inesperado al guardar tu puntaje.',
+      );
     }
   }
 
@@ -138,12 +216,25 @@ class SupabaseService {
           .from('players')
           .update(updatedData)
           .eq('player_name', playerName);
-
-      debugPrint('✅ Jugador con nombre $playerName actualizado exitosamente.');
     } on PostgrestException catch (error) {
-      debugPrint('❌ Error al actualizar jugador: ${error.message}');
+      await _logError(
+        scope: 'updatePlayer',
+        message:
+            'PostgrestException al actualizar jugador "$playerName": ${error.message}',
+      );
+      _showErrorSnackbar(
+        'Error al actualizar puntaje',
+        'No se pudo actualizar tu puntaje.',
+      );
     } catch (error) {
-      debugPrint('❌ Error inesperado al actualizar: $error');
+      await _logError(
+        scope: 'updatePlayer',
+        message: 'Error inesperado al actualizar jugador "$playerName": $error',
+      );
+      _showErrorSnackbar(
+        'Error al actualizar puntaje',
+        'Ocurrió un problema inesperado al actualizar tu puntaje.',
+      );
     }
   }
 
@@ -165,27 +256,31 @@ class SupabaseService {
 
       if (response.isNotEmpty) {
         // Jugador existe → UPDATE
-        final existingPlayer = response.first;
-        final existingPlayerName = existingPlayer['player_name'] as String;
-        final existingPoints = existingPlayer['points'] as int;
-
-        debugPrint(
-          'Jugador $playerName | $existingPlayerName encontrado. Actualizando puntuación de $existingPoints a $score...',
-        );
-
         await updatePlayer(playerName: playerName, points: score);
       } else {
         // Jugador NO existe → INSERT
-        debugPrint(
-          'Jugador $playerName no encontrado. Insertando nuevo registro...',
-        );
-
         await insertPlayer(playerName: playerName, points: score);
       }
     } on PostgrestException catch (error) {
-      debugPrint('❌ Error de Supabase al buscar jugador: ${error.message}');
+      await _logError(
+        scope: 'checkAndUpsertPlayer',
+        message:
+            'PostgrestException al buscar/upsert jugador "$playerName": ${error.message}',
+      );
+      _showErrorSnackbar(
+        'Error al guardar puntaje',
+        'No se pudo guardar tu puntaje en el servidor.',
+      );
     } catch (error) {
-      debugPrint('❌ Error inesperado: $error');
+      await _logError(
+        scope: 'checkAndUpsertPlayer',
+        message:
+            'Error inesperado al hacer upsert de jugador "$playerName": $error',
+      );
+      _showErrorSnackbar(
+        'Error al guardar puntaje',
+        'Ocurrió un problema inesperado al guardar tu puntaje.',
+      );
     }
   }
 
@@ -206,14 +301,19 @@ class SupabaseService {
       if (response.isNotEmpty) {
         final playerData = response.first;
         final points = playerData['points'] as int;
-        debugPrint('✅ Puntos recuperados para $playerName: $points');
         return points;
       } else {
-        debugPrint('⚠️ Jugador $playerName no encontrado.');
         return null;
       }
     } catch (error) {
-      debugPrint('❌ Error inesperado al recuperar puntos: $error');
+      await _logError(
+        scope: 'retrievePoints',
+        message: 'Error al recuperar puntos de "$playerName": $error',
+      );
+      _showErrorSnackbar(
+        'Error al recuperar puntaje',
+        'No se pudieron recuperar tus puntos desde el servidor.',
+      );
       return null;
     }
   }

@@ -45,11 +45,10 @@ class ConfigView extends GetView<ConfigController> {
                   return ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: c.cars.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    separatorBuilder: (_, _) => const SizedBox(width: 12),
                     itemBuilder: (context, index) {
                       final car = c.cars[index];
                       final isSelected = c.selectedCar.value?.id == car.id;
-                      print('--- car.id: ${car.id}, isSelected: $isSelected');
 
                       return GestureDetector(
                         onTap: () => c.selectCar(car),
@@ -61,7 +60,7 @@ class ConfigView extends GetView<ConfigController> {
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? Colors.green.withOpacity(0.06)
+                                ? Colors.green.withValues(alpha: 0.1)
                                 : Colors.white,
                             border: Border.all(
                               color: isSelected
@@ -73,7 +72,9 @@ class ConfigView extends GetView<ConfigController> {
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: Colors.green.withOpacity(0.25),
+                                      color: Colors.green.withValues(
+                                        alpha: 0.25,
+                                      ),
                                       blurRadius: 10,
                                       offset: const Offset(0, 4),
                                     ),

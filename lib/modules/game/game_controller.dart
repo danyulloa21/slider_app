@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:slider_app/data/services/storage_service.dart';
 import '../../data/models/obstacle_model.dart';
 import '../../data/models/car_model.dart';
 import '../../data/models/scenario_model.dart';
@@ -45,6 +46,12 @@ class GameController extends GetxController {
 
   /// Indica si el jugador ya perdió (por ejemplo, sin combustible)
   final isGameOver = false.obs;
+
+  /// Servicio para guardar el puntaje en Supabase
+  final SupabaseService _supabaseService = SupabaseService();
+
+  /// Bandera para no enviar el score múltiples veces al terminar la partida
+  bool _scoreSent = false;
 
   @override
   void onInit() {
@@ -315,6 +322,7 @@ class GameController extends GetxController {
     // Si se quedó sin combustible, marcamos fin de juego y detenemos la lógica
     if (fuel.value <= 0) {
       isGameOver.value = true;
+      _onGameOverIfNeeded();
       return;
     }
 
@@ -331,6 +339,7 @@ class GameController extends GetxController {
     // volvemos a marcar game over
     if (fuel.value <= 0) {
       isGameOver.value = true;
+      _onGameOverIfNeeded();
     }
 
     // Eliminamos obstáculos fuera de pantalla o ya consumidos
@@ -346,6 +355,25 @@ class GameController extends GetxController {
     // Si ya no hay obstáculos, generamos una nueva "oleada"
     if (obstacles.isEmpty) {
       generateObstaclesForSize(playSize.width, playSize.height);
+    }
+  }
+
+  Future<void> _onGameOverIfNeeded() async {
+    if (_scoreSent) return;
+    _scoreSent = true;
+
+    // Si por alguna razón no hay username o el score es 0, no mandamos nada
+    if (username.isEmpty || score.value <= 0) {
+      return;
+    }
+
+    try {
+      await _supabaseService.checkAndUpsertPlayer(
+        playerName: username,
+        score: score.value,
+      );
+    } catch (e) {
+      debugPrint('❌ Error al guardar score en Supabase: $e');
     }
   }
 

@@ -19,7 +19,6 @@ class ConfigController extends GetxController {
   void onInit() {
     super.onInit();
     _loadInitialData();
-    print('ConfigController onInit hashCode: $hashCode');
   }
 
   void _loadInitialData() {
