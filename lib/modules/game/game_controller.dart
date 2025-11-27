@@ -49,18 +49,66 @@ class GameController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _readArguments();
-    _configureLayout();
+    final ok = _readArguments();
+    if (ok) {
+      _configureLayout();
+    }
   }
 
-  void _readArguments() {
-    final args = Get.arguments as Map<String, dynamic>? ?? {};
-    username = args['username'] as String? ?? 'Player';
-    car = args['car'] as CarModel?;
-    scenario = args['scenario'] as ScenarioModel?;
+  bool _readArguments() {
+    final args = Get.arguments as Map<String, dynamic>?;
+
+    // Si no hay argumentos o vienen vacíos, no permitimos iniciar el juego
+    if (args == null || args.isEmpty) {
+      _handleMissingConfig();
+      return false;
+    }
+
+    final name = (args['username'] as String?)?.trim();
+    final selectedCar = args['car'] as CarModel?;
+    final selectedScenario = args['scenario'] as ScenarioModel?;
     final vertical = args['isVertical'] as bool? ?? true;
+
+    // Validamos que vengan los datos mínimos para poder jugar
+    if (name == null ||
+        name.isEmpty ||
+        selectedCar == null ||
+        selectedScenario == null) {
+      _handleMissingConfig();
+      return false;
+    }
+
+    username = name;
+    car = selectedCar;
+    scenario = selectedScenario;
     isVertical.value =
         vertical; // 👈 crea un RxBool isVertical en este controller
+
+    return true;
+  }
+
+  void _handleMissingConfig() {
+    // Mostramos un mensaje y redirigimos a la pantalla de configuración.
+    // Usamos addPostFrameCallback para asegurarnos de que el árbol esté montado.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Evitamos apilar múltiples snackbars si ya hay una abierta
+      if (Get.isSnackbarOpen == true) return;
+
+      Get.snackbar(
+        'Configuración requerida',
+        'Configura tu nombre, carro y escenario antes de jugar.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.redAccent,
+        colorText: Colors.white,
+      );
+
+      // Regresamos a la pantalla de configuración si es posible
+      if (Get.currentRoute != '/config') {
+        Get.offAllNamed('/config');
+      } else if (Navigator.canPop(Get.context!)) {
+        Get.back();
+      }
+    });
   }
 
   void _configureLayout() {
