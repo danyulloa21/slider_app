@@ -11,8 +11,6 @@ class ScoreboardView extends GetView<ScoreboardController> {
   Widget build(BuildContext context) {
     return AppLayout(
       title: 'Scoreboard',
-      showBack: true,
-      showDrawer: false,
       scrollable: false,
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -44,7 +42,7 @@ class ScoreboardView extends GetView<ScoreboardController> {
             Text(
               controller.errorMessage.value,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
+              style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
@@ -86,19 +84,16 @@ class ScoreboardView extends GetView<ScoreboardController> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
           child: Text(
             'Top jugadores',
-            style: Theme.of(Get.context!).textTheme.titleMedium?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
+            style: Theme.of(
+              Get.context!,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Text(
-            'Los mejores puntajes guardados en Supabase',
-            style: Theme.of(
-              Get.context!,
-            ).textTheme.bodySmall?.copyWith(color: Colors.white70),
+            'Los mejores puntajes',
+            style: Theme.of(Get.context!).textTheme.bodySmall,
           ),
         ),
         const SizedBox(height: 8),
