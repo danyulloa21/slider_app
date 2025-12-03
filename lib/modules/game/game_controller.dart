@@ -465,6 +465,8 @@ void _startNewGameSession() {
   /// Actualiza la lógica del juego (movimiento de obstáculos, colisiones, etc.).
   /// [dt] es el delta de tiempo en segundos desde el último frame.
   void updateGame(double dt) {
+    const double scoreSpeed = 50.0;
+
     // Si el juego ya terminó, no seguimos actualizando nada
     if (isGameOver.value) return;
     fuel.value = max(0, fuel.value - dt * 3); // Consumo pasivo de gasolina
@@ -474,7 +476,8 @@ void _startNewGameSession() {
       Get.offNamed('/gas_station');
       return;
     }
-    score.value += (10*dt.toInt() * scoreMultiplier).toInt();
+    final double scoreIncrease = scoreSpeed * dt * scoreMultiplier;
+    score.value += scoreIncrease.toInt();
     final playSize = _playAreaSize;
     if (playSize == null) return;
     if (obstacles.isEmpty) return;
@@ -546,10 +549,20 @@ void _startNewGameSession() {
       case ObstacleType.obstacle1x1:
       // ❌ COLISIÓN CON OBSTÁCULO MALO (GAME OVER INMEDIATO)
         // Forzamos el Game Over
+        if (isGameOver.value) return;
         isGameOver.value = true;
         // Llamamos a la lógica final (guardar score, mostrar pantalla de derrota)
         _onGameOverIfNeeded();
+        Get.snackbar(
+            '¡ACCIDENTE!', 
+            'Has colisionado. El juego comenzará de nuevo.',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+            duration: const Duration(seconds: 4)
+        );
         Get.offAllNamed('/scoreboard');
+        resetGame();
         break;
 
       case ObstacleType.fuelPickup:
