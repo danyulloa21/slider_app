@@ -1,0 +1,39 @@
+name: slider_app
+description: "A new Flutter project."
+
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.2
+
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  supabase_flutter: ^2.10.3
+  flutter_dotenv: ^5.1.0
+  get: ^4.7.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+
+  flutter_lints: ^6.0.0
+
+
+flutter:
+
+
+  uses-material-design: true
+
+
+  assets:
+    - .env
+    - assets/cars/orange_car.png
+    - assets/cars/red_car.png
+    - assets/cars/yellow_car.png
+
