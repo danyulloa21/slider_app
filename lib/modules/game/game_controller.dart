@@ -1,7 +1,7 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+
 import 'package:slider_app/data/services/storage_service.dart';
 import '../../data/models/obstacle_model.dart';
 import '../../data/models/car_model.dart';
@@ -17,6 +17,13 @@ class GameController extends GetxController {
 
   late GameSizeConfig sizeConfig;
 
+  //Constantes del juego
+  static const double costPerFuelUnit = 0.5;
+  static const int costToUpgradeTank = 100;
+  static const int costperTyre = 100;
+  static const int maxTyres = 5;
+  static const double upgradeAmount = 50.0; // velocidad máxima de la pista
+
   // Config de carriles y vista
   final lanesCount = 3.obs;
   final laneWidth = 0.0.obs;
@@ -24,9 +31,11 @@ class GameController extends GetxController {
 
   // Estado del jugador
   final laneIndex = 0.obs; // 0..lanesCount-1
-  final fuel = 100.0.obs; // 0..100
+  final fuel = 0.0.obs; // Gasolina actual
+  final maxFuel = 100.0.obs; // Capacidad de Gasolina máxima
   final tyres = 3.obs; // vidas
   final score = 0.obs;
+  final money = 0.obs; // dinero recogido
 
   /// Posición actual del coche en la pista
   final carX = 0.0.obs;
@@ -36,6 +45,158 @@ class GameController extends GetxController {
   void updateCarPosition(double x, double y) {
     carX.value = x;
     carY.value = y;
+  }
+
+  // 1. Recargar Combustible
+  void refillFuel(double amount) {
+    final cost = amount * costPerFuelUnit;
+
+    if (money.value >= cost) {
+      // 1. Deducir el dinero
+      money.value -= cost.toInt();
+
+      // 2. Añadir el combustible, limitándolo a la capacidad máxima (maxFuel)
+      fuel.value = (fuel.value + amount).clamp(0, maxFuel.value);
+
+      // Opcional: Mostrar un mensaje de éxito
+      Get.snackbar('Recarga Exitosa', 'Tanque lleno por \$${cost.toInt()}');
+    } else {
+      // Esto no debería pasar si la vista deshabilita el botón, pero es bueno
+      // tener una verificación.
+      Get.snackbar(
+        'Error',
+        'Dinero insuficiente para recargar.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  /// 2. Mejorar Capacidad del Tanque
+  void upgradeFuelCapacity() {
+    const cost = costToUpgradeTank;
+
+    if (fuel.value < maxFuel.value) {
+      Get.snackbar(
+        'Gas requerido',
+        'Debes recargar el tanque antes de mejorar la capacidad.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+      );
+      return;
+    }
+
+    if (money.value >= cost) {
+      // 1. Deducir el dinero
+      money.value -= cost;
+
+      // 2. Aumentar la capacidad máxima
+      maxFuel.value += upgradeAmount;
+
+      // Opcional: Mostrar un mensaje de éxito
+      Get.snackbar(
+        '¡Mejora Comprada!',
+        'Tu tanque ahora tiene capacidad para ${maxFuel.value.toInt()} unidades.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } else {
+      Get.snackbar(
+        'Error',
+        'Dinero insuficiente para la mejora.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  // comprar llantas
+  void buyTyre() {
+    const cost = costperTyre;
+
+    if (fuel.value < maxFuel.value) {
+      Get.snackbar(
+        'Gas requerido',
+        'Debes recargar el tanque antes de mejorar la capacidad.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+      );
+      return;
+    }
+
+    if (money.value >= cost && tyres.value < maxTyres) {
+      // 1. Deducir el dinero
+      money.value -= cost;
+      // 2. Aumentar las llantas
+      tyres.value += 1;
+
+      // Mostrar un mensaje de éxito
+      Get.snackbar(
+        '¡Nivel de Llantas Mejorado!',
+        'Tu multiplicador de score es ahora ${scoreMultiplier.toStringAsFixed(2)}x.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } else if (tyres.value >= maxTyres) {
+      Get.snackbar(
+        'Llantas al maximo',
+        'Ya tienes el maximo nivel de llantas',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    } else {
+      Get.snackbar(
+        'Error',
+        'Dinero insuficiente para la mejora (\$$cost).',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  double get scoreMultiplier {
+    // 1 llanta = 1.0x, 2 llantas = 1.25x, ..., 5 llantas = 2.0x
+    final int currentTyres = tyres.value.clamp(1, maxTyres);
+
+    // Fórmula: 1.0 + (Nivel - 1) * 0.25
+    return 1.0 + (currentTyres - 1) * 0.25;
+  }
+
+  // 3. Continuar el Juego
+  void continueGame() {
+    if (fuel.value > 0) {
+      // 1. Desactivar el estado de Game Over
+      fuel.value = maxFuel.value; // Recargamos un 20% del tanque
+      isGameOver.value = false;
+      // Reiniciamos los obstáculos para que no sigan moviéndose detrás de la vista.
+      obstacles.clear();
+      // 2. Volver a la vista del juego
+      // Usamos Get.offNamed() para reemplazar la GasStationView con la GameView
+      // y evitar que el usuario presione "Atrás" para volver a la gasolinera.
+      Get.offNamed('/game');
+    } else {
+      // Esto no debería pasar ya que el botón está deshabilitado en la vista
+      Get.snackbar(
+        'Espera',
+        'Debes recargar combustible para continuar.',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+    }
+  }
+
+  void resetGame() {
+    // Mantiene: money.value, maxFuel.value
+
+    // Reinicia los valores de la partida
+    score.value = 0;
+    tyres.value = 1; // Llantas o vidas iniciales
+    money.value = 0;
+    maxFuel.value = 100.0;
+
+    laneIndex.value = lanesCount.value ~/ 2;
+    obstacles.clear();
+    isGameOver.value = false;
+
+    // El combustible se inicializa al máximo de la capacidad actual
+    fuel.value = maxFuel.value;
+
+    _scoreSent = false;
+    _playAreaSize = null;
+    Get.offAllNamed('/game');
   }
 
   /// Lista de obstáculos y recogibles (gasolina, llantas) que se dibujan en la pista
@@ -59,7 +220,21 @@ class GameController extends GetxController {
     final ok = _readArguments();
     if (ok) {
       _configureLayout();
+      _startNewGameSession();
     }
+  }
+
+  void _startNewGameSession() {
+    // 1. Establecer los valores base de una partida nueva
+    maxFuel.value = 100.0; // Siempre inicia con la capacidad base
+    money.value = 0; // Siempre inicia con 0 dinero
+
+    // 2. Llama a la lógica de reinicio (si existe)
+    // Si no tienes un `resetGame` usa esta lógica directamente aquí.
+    fuel.value = maxFuel.value;
+    score.value = 0;
+    tyres.value = 1;
+    // ... otros reinicios si los tienes
   }
 
   bool _readArguments() {
@@ -271,25 +446,41 @@ class GameController extends GetxController {
           break;
       }
 
-      // Distribuimos Y en "bandas" para que no se apilen todos juntos
+      // Distribuimos SPAWN en "bandas" para que no se apilen todos juntos
       final band = _rand.nextDouble();
-      double y;
+      double spawnPoint;
       if (band < 0.33) {
         // Aparece por arriba de la pantalla (entra hacia el jugador)
-        y = -height * (0.3 + _rand.nextDouble() * 0.7);
+        spawnPoint =
+            -(isVertical.value ? height : width) *
+            (0.3 + _rand.nextDouble() * 0.7);
       } else if (band < 0.66) {
         // Cerca del área central
-        y = height * (0.1 + _rand.nextDouble() * 0.8);
+        spawnPoint =
+            (isVertical.value ? height : width) *
+            (0.1 + _rand.nextDouble() * 0.8);
       } else {
         // Más alejado hacia abajo (para sensación de profundidad / avance)
-        y = height * (1.0 + _rand.nextDouble() * 0.8);
+        spawnPoint =
+            (isVertical.value ? height : width) *
+            (1.0 + _rand.nextDouble() * 0.8);
+      }
+
+      double initialX, initialY;
+
+      if (isVertical.value) {
+        initialX = laneCenterX - w / 2;
+        initialY = spawnPoint;
+      } else {
+        initialX = spawnPoint;
+        initialY = laneCenterX - h / 2;
       }
 
       obstacles.add(
         ObstacleInstance(
           type: type,
-          x: laneCenterX - w / 2,
-          y: y,
+          x: initialX,
+          y: initialY,
           size: Size(w, h),
           speed: height * speedFactor,
         ),
@@ -300,9 +491,19 @@ class GameController extends GetxController {
   /// Actualiza la lógica del juego (movimiento de obstáculos, colisiones, etc.).
   /// [dt] es el delta de tiempo en segundos desde el último frame.
   void updateGame(double dt) {
+    const double scoreSpeed = 50.0;
+
     // Si el juego ya terminó, no seguimos actualizando nada
     if (isGameOver.value) return;
+    fuel.value = max(0, fuel.value - dt * 3); // Consumo pasivo de gasolina
 
+    if (fuel.value <= 0) {
+      isGameOver.value = true;
+      Get.offNamed('/gas_station');
+      return;
+    }
+    final double scoreIncrease = scoreSpeed * dt * scoreMultiplier;
+    score.value += scoreIncrease.toInt();
     final playSize = _playAreaSize;
     if (playSize == null) return;
     if (obstacles.isEmpty) return;
@@ -316,30 +517,14 @@ class GameController extends GetxController {
       }
     }
 
-    // Consumo de gasolina constante
-    fuel.value = max(fuel.value - 3 * dt, 0);
-
-    // Si se quedó sin combustible, marcamos fin de juego y detenemos la lógica
-    if (fuel.value <= 0) {
-      isGameOver.value = true;
-      _onGameOverIfNeeded();
-      return;
-    }
-
     // Colisiones con el coche
     final carR = carRect;
     for (final o in obstacles) {
       if (o.consumed) continue;
       if (o.rect.overlaps(carR)) {
         _handleCollision(o);
+        if (isGameOver.value) return; // salimos si ya terminó el juego
       }
-    }
-
-    // Si después de una colisión también nos quedamos sin combustible,
-    // volvemos a marcar game over
-    if (fuel.value <= 0) {
-      isGameOver.value = true;
-      _onGameOverIfNeeded();
     }
 
     // Eliminamos obstáculos fuera de pantalla o ya consumidos
@@ -377,22 +562,39 @@ class GameController extends GetxController {
     }
   }
 
+  void finishGameAndGoToScoreboard() {
+    isGameOver.value = true; // Asegurarse de que el juego se detenga
+    _onGameOverIfNeeded(); // Guardar el score
+    Get.offAllNamed('/scoreboard'); // Navegar a la pantalla de resultados
+  }
+
   void _handleCollision(ObstacleInstance o) {
     switch (o.type) {
       case ObstacleType.obstacle2x1:
       case ObstacleType.obstacle1x1:
-        tyres.value = max(tyres.value - 1, 0);
-        fuel.value = max(fuel.value - 15, 0);
+        // ❌ COLISIÓN CON OBSTÁCULO MALO (GAME OVER INMEDIATO)
+        // Forzamos el Game Over
+        if (isGameOver.value) return;
+        isGameOver.value = true;
+        // Llamamos a la lógica final (guardar score, mostrar pantalla de derrota)
+        _onGameOverIfNeeded();
+        Get.snackbar(
+          '¡ACCIDENTE!',
+          'Has colisionado. El juego comenzará de nuevo.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
+        );
+        Get.offAllNamed('/scoreboard');
+        resetGame();
         break;
+
       case ObstacleType.fuelPickup:
       case ObstacleType.recarga1x1:
       case ObstacleType.recarga1x05:
-        fuel.value = min(fuel.value + 25, 100);
-        score.value += 5;
-        break;
       case ObstacleType.tyrePickup:
-        tyres.value = min(tyres.value + 1, 4);
-        score.value += 10;
+        money.value += 10;
         break;
     }
     o.consumed = true;

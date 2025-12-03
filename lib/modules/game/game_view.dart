@@ -96,47 +96,14 @@ class _GameViewState extends State<GameView> {
                     Positioned.fill(
                       child: Container(
                         color: Colors.black.withValues(alpha: 0.7),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                '¡Juego terminado!',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Te quedaste sin combustible.',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Puntaje: ${controller.score.value}',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 18,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  // Aquí podrías navegar al scoreboard o reiniciar el juego
-                                  if (Navigator.canPop(context)) {
-                                    Get.back();
-                                  } else {
-                                    Get.offAllNamed('/config');
-                                  }
-                                },
-                                child: const Text('Salir'),
-                              ),
-                            ],
+                        child: const Center(
+                          child: Text(
+                            '!Sin combustible! Redirigiendo a la gasolinera...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
@@ -305,12 +272,12 @@ class _GameViewState extends State<GameView> {
             case ObstacleType.fuelPickup:
             case ObstacleType.recarga1x1:
             case ObstacleType.recarga1x05:
-              baseColor = Colors.orangeAccent;
-              icon = Icons.local_gas_station;
+              baseColor = const Color.fromRGBO(23, 175, 61, 1);
+              icon = Icons.money;
               break;
             case ObstacleType.tyrePickup:
-              baseColor = Colors.blueGrey;
-              icon = Icons.build; // representa cambio de llantas
+              baseColor = const Color.fromRGBO(23, 175, 61, 1);
+              icon = Icons.money; // representa cambio de llantas
               break;
           }
 
@@ -383,10 +350,12 @@ class _GameViewState extends State<GameView> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       margin: const EdgeInsets.all(8),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: Colors.black.withValues(
+          alpha: 0.55,
+        ), // Usé .withOpacity en lugar de .withValues(alpha: 0.55) para evitar errores si no es una función propia de tu AppLayout
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.15),
+          color: Colors.white.withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
@@ -457,8 +426,10 @@ class _GameViewState extends State<GameView> {
               const SizedBox(width: 8),
               Expanded(
                 child: Obx(() {
+                  // **¡IMPORTANTE!** Ahora usamos maxFuel.value en lugar de 100
                   final fuelPercent =
-                      controller.fuel.value.clamp(0, 100) / 100.0;
+                      controller.fuel.value.clamp(0, controller.maxFuel.value) /
+                      controller.maxFuel.value;
                   Color barColor;
                   if (fuelPercent > 0.6) {
                     barColor = Colors.greenAccent;
@@ -473,7 +444,7 @@ class _GameViewState extends State<GameView> {
                     child: LinearProgressIndicator(
                       value: fuelPercent,
                       minHeight: 8,
-                      backgroundColor: Colors.white.withValues(alpha: 0.15),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                       valueColor: AlwaysStoppedAnimation<Color>(barColor),
                     ),
                   );
@@ -482,7 +453,8 @@ class _GameViewState extends State<GameView> {
               const SizedBox(width: 8),
               Obx(
                 () => Text(
-                  '${controller.fuel.value.toInt()}%',
+                  // Mostramos el valor actual y el máximo
+                  '${controller.fuel.value.toInt()}/${controller.maxFuel.value.toInt()}',
                   style: const TextStyle(color: Colors.white, fontSize: 11),
                 ),
               ),
@@ -491,10 +463,11 @@ class _GameViewState extends State<GameView> {
 
           const SizedBox(height: 6),
 
-          // Fila inferior: llantas y puntaje
+          // Fila inferior: llantas, puntaje y DINERO
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              // Llantas (Tyres)
               Row(
                 children: [
                   const Icon(
@@ -534,6 +507,8 @@ class _GameViewState extends State<GameView> {
                   ),
                 ],
               ),
+
+              // Puntaje (Score/Distancia)
               Row(
                 children: [
                   const Icon(Icons.star, color: Colors.amber, size: 18),
@@ -561,6 +536,43 @@ class _GameViewState extends State<GameView> {
                         '${controller.score.value}',
                         style: const TextStyle(
                           color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              // ¡NUEVA! Dinero (Money)
+              Row(
+                children: [
+                  const Icon(
+                    Icons.monetization_on,
+                    color: Colors.greenAccent,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 4),
+                  const Text(
+                    'Dinero',
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  const SizedBox(width: 6),
+                  Obx(
+                    () => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.shade700,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        '${controller.money.value}', // Usamos la nueva variable 'money'
+                        style: const TextStyle(
+                          color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
                         ),

@@ -92,4 +92,8 @@ class ScoreboardController extends GetxController {
     if (currentUsername == null) return false;
     return score.name == currentUsername;
   }
+
+  void restartGame() {
+    Get.offAllNamed('/config');
+  }
 }

@@ -117,6 +117,21 @@ class ScoreboardView extends GetView<ScoreboardController> {
             },
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ElevatedButton.icon(
+            onPressed: controller.restartGame, // Llama al método del controlador
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            label: const Text(
+              'Empezar Partida Nueva',
+              style: TextStyle(fontSize: 18, color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              backgroundColor: Colors.green,
+            ),
+          ),
+        ),
       ],
     );
   }

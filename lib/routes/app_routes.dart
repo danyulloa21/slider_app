@@ -5,4 +5,5 @@ abstract class AppRoutes {
   static const config = '/config';
   static const game = '/game';
   static const scoreboard = '/scoreboard';
+  static const gasStation = '/gas_station';
 }
