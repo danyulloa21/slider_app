@@ -40,13 +40,44 @@ class GasStationView extends GetView<GameController> {
         ),
       ),
       // --- Botón de Continuar ---
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Obx(
-          () => ElevatedButton(
+      // --- Botones de Continuar y Salir ---
+bottomNavigationBar: Padding(
+  padding: const EdgeInsets.all(16.0),
+  child: Obx(
+    () => Row(
+      children: [
+        // Botón de Salir
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () {
+              Get.defaultDialog(
+                title: 'Salir del juego',
+                middleText: '¿Estás seguro que quieres salir?',
+                textConfirm: 'Sí',
+                textCancel: 'No',
+                onConfirm: () {
+                  Get.back(); // Cierra el diálogo
+                  controller.finishGameAndGoToScoreboard(); // Sale del juego
+                },
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              minimumSize: const Size.fromHeight(50),
+              backgroundColor: Colors.red,
+            ),
+            child: const Text(
+              'SALIR',
+              style: TextStyle(fontSize: 20, color: Colors.white),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12), // Espacio entre botones
+        // Botón de Continuar
+        Expanded(
+          child: ElevatedButton(
             onPressed: (controller.fuel.value > 0)
                 ? controller.continueGame
-                : null, // Solo se puede continuar con combustible
+                : null,
             style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(50),
               backgroundColor: Colors.green,
@@ -57,7 +88,10 @@ class GasStationView extends GetView<GameController> {
             ),
           ),
         ),
-      ),
+      ],
+    ),
+  ),
+),
     );
   }
 
