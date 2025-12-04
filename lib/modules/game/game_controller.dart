@@ -565,6 +565,7 @@ class GameController extends GetxController {
   void finishGameAndGoToScoreboard() {
     isGameOver.value = true; // Asegurarse de que el juego se detenga
     _onGameOverIfNeeded(); // Guardar el score
+    resetGame();
     Get.offAllNamed('/scoreboard'); // Navegar a la pantalla de resultados
   }
 
@@ -578,18 +579,26 @@ class GameController extends GetxController {
         isGameOver.value = true;
         // Llamamos a la lógica final (guardar score, mostrar pantalla de derrota)
         _onGameOverIfNeeded();
-        Get.snackbar(
-          '¡ACCIDENTE!',
-          'Has colisionado. El juego comenzará de nuevo.',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
-          duration: const Duration(seconds: 4),
-        );
-        Get.offAllNamed('/scoreboard');
-        resetGame();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          debugPrint('🚗💥 Colisión con obstáculo. Juego Terminado.');
+          Get.defaultDialog(
+            title: '¡Juego Terminado!',
+            middleText:
+                'Has colisionado con un obstáculo.\nTu puntaje final es ${score.value}.',
+            confirmTextColor: Colors.white,
+            onConfirm: () {
+              finishGameAndGoToScoreboard(); // Sale del juego
+            },
+            onCancel: (){
+              isGameOver.value = false;
+              resetGame(); // Reinicia el juego
+              Get.back();
+            },
+            textConfirm: 'Salir',
+            textCancel: 'Reiniciar',
+          );
+        });
         break;
-
       case ObstacleType.fuelPickup:
       case ObstacleType.recarga1x1:
       case ObstacleType.recarga1x05:

@@ -55,64 +55,64 @@ class _GameViewState extends State<GameView> {
         final isGameOver = controller.isGameOver.value;
 
         return LayoutBuilder(
-          builder: (context, constraints) {
-            final totalWidth = constraints.maxWidth;
-            final totalHeight = constraints.maxHeight;
-            final isVertical = controller.isVertical.value;
-
-            if (!_carPositionInitialized) {
-              _initCarPosition(totalWidth, totalHeight, isVertical);
-              controller.updateCarPosition(_carX, _carY);
-            }
-
-            // Generamos obstáculos estáticos solo una vez para este tamaño
-            controller.generateObstaclesForSize(totalWidth, totalHeight);
-
-            return GestureDetector(
-              // Arrastre libre: horizontal en modo vertical, vertical en modo horizontal
-              onPanUpdate: (details) =>
-                  _handleDrag(details, totalWidth, totalHeight, isVertical),
-              child: Stack(
-                children: [
-                  // Fondo del escenario
-                  Positioned.fill(child: _buildBackground()),
-
-                  // Carriles
-                  Positioned.fill(
-                    child: _buildLanes(totalWidth, totalHeight, isVertical),
-                  ),
-
-                  // Obstáculos y pickups (gasolina, llantas)
-                  Positioned.fill(child: _buildObstaclesLayer()),
-
-                  // Auto
-                  _buildCar(isVertical),
-
-                  // HUD
-                  Positioned(top: 0, left: 0, right: 0, child: _buildHud()),
-
-                  // Overlay de Game Over cuando no hay combustible
-                  if (isGameOver)
-                    Positioned.fill(
-                      child: Container(
-                        color: Colors.black.withValues(alpha: 0.7),
-                        child: const Center(
-                          child: Text(
-                            '!Sin combustible! Redirigiendo a la gasolinera...',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
+  builder: (context, constraints) {
+    final totalWidth = constraints.maxWidth;
+    final totalHeight = constraints.maxHeight;
+    final isVertical = controller.isVertical.value;
+    
+    // Usar addPostFrameCallback para inicializar después del build
+    if (!_carPositionInitialized) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initCarPosition(totalWidth, totalHeight, isVertical);
+        controller.updateCarPosition(_carX, _carY);
+        _carPositionInitialized = true;
+      });
+    }
+    
+    // Generar obstáculos después del build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.generateObstaclesForSize(totalWidth, totalHeight);
+    });
+    
+    return GestureDetector(
+      onPanUpdate: (details) =>
+          _handleDrag(details, totalWidth, totalHeight, isVertical),
+      child: Stack(
+        children: [
+          // Fondo del escenario
+          Positioned.fill(child: _buildBackground()),
+          // Carriles
+          Positioned.fill(
+            child: _buildLanes(totalWidth, totalHeight, isVertical),
+          ),
+          // Obstáculos y pickups (gasolina, llantas)
+          Positioned.fill(child: _buildObstaclesLayer()),
+          // Auto
+          _buildCar(isVertical),
+          // HUD
+          Positioned(top: 0, left: 0, right: 0, child: _buildHud()),
+          // Overlay de Game Over cuando no hay combustible
+          if (isGameOver)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                child: const Center(
+                  child: Text(
+                    '¡Sin combustible! Redirigiendo a la gasolinera...',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
                     ),
-                ],
+                  ),
+                ),
               ),
-            );
-          },
-        );
+            ),
+        ],
+      ),
+    );
+  },
+);
       }),
     );
   }
